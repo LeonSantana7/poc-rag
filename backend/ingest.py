@@ -72,7 +72,8 @@ def ingest():
     setup_db(conn)
 
     print("Carregando dataset...")
-    df = pd.read_csv("/data/ai4i2020.csv")
+    csv_path = "/data/ai4i2020.csv" if os.path.exists("/data/ai4i2020.csv") else "/app/data/ai4i2020.csv"
+    df = pd.read_csv(csv_path)
 
     print("Carregando modelo de embeddings...")
     model = SentenceTransformer("all-MiniLM-L6-v2")

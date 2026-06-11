@@ -1,0 +1,6 @@
+.env
+chroma_db/
+data/ai4i2020.csv
+__pycache__/
+*.pyc
+.DS_Store

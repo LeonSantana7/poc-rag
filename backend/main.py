@@ -43,4 +43,6 @@ def reindexar():
 
 
 # Serve o frontend
-app.mount("/", StaticFiles(directory="../frontend", html=True), name="frontend")
+import os
+_frontend_dir = "./frontend" if os.path.exists("./frontend") else "../frontend"
+app.mount("/", StaticFiles(directory=_frontend_dir, html=True), name="frontend")

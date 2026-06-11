@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RAG — Manutenção Preditiva</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: #0f1117;
+            color: #e0e0e0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: #1a1d27;
+            padding: 16px 24px;
+            border-bottom: 1px solid #2a2d3a;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        header .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #22c55e;
+        }
+
+        header h1 {
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        header span {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        #chat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .mensagem {
+            max-width: 75%;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .mensagem.usuario {
+            background: #2563eb;
+            color: #fff;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .mensagem.bot {
+            background: #1e2130;
+            border: 1px solid #2a2d3a;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .mensagem.bot .label {
+            font-size: 11px;
+            color: #6b7280;
+            margin-bottom: 6px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .mensagem.carregando {
+            opacity: 0.5;
+            font-style: italic;
+        }
+
+        .sugestoes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 0 24px 12px;
+        }
+
+        .sugestoes button {
+            background: #1e2130;
+            border: 1px solid #2a2d3a;
+            color: #9ca3af;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .sugestoes button:hover {
+            border-color: #2563eb;
+            color: #fff;
+        }
+
+        #form {
+            padding: 16px 24px;
+            background: #1a1d27;
+            border-top: 1px solid #2a2d3a;
+            display: flex;
+            gap: 10px;
+        }
+
+        #input {
+            flex: 1;
+            background: #0f1117;
+            border: 1px solid #2a2d3a;
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: #e0e0e0;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        #input:focus {
+            border-color: #2563eb;
+        }
+
+        #btn {
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        #btn:hover {
+            background: #1d4ed8;
+        }
+
+        #btn:disabled {
+            background: #374151;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="dot"></div>
+        <h1>Assistente de Manutenção Preditiva</h1>
+    </header>
+
+    <div id="chat">
+        <div class="mensagem bot">
+            <div class="label">🤖 Assistente</div>
+            Olá! Sou especialista em manutenção preditiva industrial. Posso analisar padrões de falha, identificar
+            causas de parada e recomendar ações com base no histórico de máquinas. Como posso ajudar?
+        </div>
+    </div>
+
+    <div class="sugestoes">
+        <button onclick="perguntar('Quais são os tipos de falha mais comuns?')">Tipos de falha comuns</button>
+        <button onclick="perguntar('Quando ocorre falha por desgaste de ferramenta (TWF)?')">Falha por desgaste</button>
+        <button onclick="perguntar('Qual faixa de torque está associada a falhas?')">Torque e falhas</button>
+        <button onclick="perguntar('Como a temperatura influencia nas falhas?')">Temperatura e falhas</button>
+    </div>
+
+    <form id="form" onsubmit="enviar(event)">
+        <input id="input" type="text"
+            placeholder="Pergunte sobre padrões de falha, diagnósticos, parâmetros críticos..." autocomplete="off" />
+        <button id="btn" type="submit">Enviar</button>
+    </form>
+
+    <script>
+        const API_URL = "http://localhost:8000";
+
+        async function perguntar(texto) {
+            document.getElementById("input").value = texto;
+            await enviar(new Event("submit"));
+        }
+
+        async function enviar(e) {
+            e.preventDefault();
+            const input = document.getElementById("input");
+            const btn = document.getElementById("btn");
+            const pergunta = input.value.trim();
+            if (!pergunta) return;
+
+            adicionarMensagem(pergunta, "usuario");
+            input.value = "";
+            btn.disabled = true;
+
+            const loading = adicionarMensagem("Analisando dados históricos...", "bot carregando");
+
+            try {
+                const res = await fetch(`${API_URL}/query`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ pergunta })
+                });
+                const data = await res.json();
+                loading.remove();
+                adicionarMensagem(data.resposta, "bot");
+            } catch (err) {
+                loading.remove();
+                adicionarMensagem("Erro ao conectar com o servidor.", "bot");
+            }
+
+            btn.disabled = false;
+            input.focus();
+        }
+
+        function adicionarMensagem(texto, classe) {
+            const chat = document.getElementById("chat");
+            const div = document.createElement("div");
+            div.className = `mensagem ${classe}`;
+            if (classe.includes("bot") && !classe.includes("carregando")) {
+                div.innerHTML = `<div class="label">🤖 Assistente</div>${texto}`;
+            } else {
+                div.textContent = texto;
+            }
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+            return div;
+        }
+    </script>
+</body>
+
+</html>

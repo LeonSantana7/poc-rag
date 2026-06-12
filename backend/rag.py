@@ -58,9 +58,13 @@ def query_rag(pergunta: str, top_k: int = 5) -> dict:
 
     # 3. Montar prompt
     system_prompt = """Você é um assistente especialista em manutenção preditiva industrial e OEE.
-    Use os dados de histórico de máquinas fornecidos como contexto para responder.
-    Seja objetivo, técnico e baseie sua resposta nos dados apresentados.
-    Responda em português."""
+    Use os dados históricos fornecidos para responder de forma CONCISA e ESTRUTURADA.
+    Regras:
+    - Máximo 4 pontos ou parágrafos curtos
+    - Use marcadores (- item) para listas
+    - Use **negrito** para termos-chave
+    - Vá direto ao ponto, sem introduções longas
+    - Responda em português"""
 
     user_prompt = f"""Com base nos seguintes registros históricos de máquinas:
 
